@@ -1,11 +1,13 @@
-from django.urls import path
-from .views import ExerciseListCreateView
+from rest_framework.routers import DefaultRouter
+from .views import ExerciseViewSet
 
 
-urlpatterns = [
-    path(
-        'exercises/',
-        ExerciseListCreateView.as_view(),
-        name='exercise-list-create'
-    ),
-]
+router = DefaultRouter()
+
+router.register(
+    r'exercises',
+    ExerciseViewSet,
+    basename='exercise'
+)
+
+urlpatterns = router.urls

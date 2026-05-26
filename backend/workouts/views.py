@@ -1,9 +1,9 @@
-from rest_framework import generics
+from rest_framework import viewsets
 from .models import Exercise
 from .serializers import ExerciseSerializer
 
 
-class ExerciseListCreateView(generics.ListCreateAPIView):
+class ExerciseViewSet(viewsets.ModelViewSet):
 
     queryset = Exercise.objects.all()
 
