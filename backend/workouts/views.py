@@ -1,6 +1,16 @@
 from rest_framework import viewsets
-from .models import Exercise
-from .serializers import ExerciseSerializer
+
+from .models import (
+    Exercise,
+    WorkoutSession,
+    ExerciseSet
+)
+
+from .serializers import (
+    ExerciseSerializer,
+    WorkoutSessionSerializer,
+    ExerciseSetSerializer
+)
 
 
 class ExerciseViewSet(viewsets.ModelViewSet):
@@ -9,6 +19,16 @@ class ExerciseViewSet(viewsets.ModelViewSet):
 
     serializer_class = ExerciseSerializer
 
-from django.shortcuts import render
 
-# Create your views here.
+class WorkoutSessionViewSet(viewsets.ModelViewSet):
+
+    queryset = WorkoutSession.objects.all()
+
+    serializer_class = WorkoutSessionSerializer
+
+
+class ExerciseSetViewSet(viewsets.ModelViewSet):
+
+    queryset = ExerciseSet.objects.all()
+
+    serializer_class = ExerciseSetSerializer
