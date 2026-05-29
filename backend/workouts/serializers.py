@@ -1,50 +1,3 @@
-"""from rest_framework import serializers
-from .models import Exercise, WorkoutSession, ExerciseSet
-
-
-class ExerciseSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Exercise
-
-        fields = [
-            'id',
-            'name',
-            'muscle_group',
-            'created_by',
-            'created_at',
-        ]
-
-
-class WorkoutSessionSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = WorkoutSession
-
-        fields = [
-            'id',
-            'user',
-            'date',
-            'notes',
-            'created_at',
-        ]
-
-
-class ExerciseSetSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = ExerciseSet
-
-        fields = [
-            'id',
-            'workout_session',
-            'exercise',
-            'set_number',
-            'weight',
-            'reps',
-            'created_at',
-        ]
-"""
 from rest_framework import serializers
 
 from .models import (
@@ -61,6 +14,11 @@ class ExerciseSerializer(serializers.ModelSerializer):
 
         fields = '__all__'
 
+        read_only_fields = [
+            'created_by',
+            'created_at',
+        ]
+
 
 class ExerciseSetSerializer(serializers.ModelSerializer):
 
@@ -68,6 +26,10 @@ class ExerciseSetSerializer(serializers.ModelSerializer):
         model = ExerciseSet
 
         fields = '__all__'
+
+        read_only_fields = [
+            'created_at',
+        ]
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):
@@ -81,3 +43,8 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
         model = WorkoutSession
 
         fields = '__all__'
+
+        read_only_fields = [
+            'user',
+            'created_at',
+        ]
