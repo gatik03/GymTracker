@@ -1,5 +1,6 @@
 from rest_framework.routers import DefaultRouter
-
+from .analytics import TotalVolumeView
+from django.urls import path
 from .views import (
     ExerciseViewSet,
     WorkoutSessionViewSet,
@@ -28,3 +29,10 @@ router.register(
 )
 
 urlpatterns = router.urls
+urlpatterns += [
+    path(
+        'analytics/total-volume/',
+        TotalVolumeView.as_view(),
+        name='total-volume'
+    )
+]
