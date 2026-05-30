@@ -1,23 +1,106 @@
-# Python
-venv/
-__pycache__/
-*.pyc
+# =========================
 
-# SQLite
+# Python / Django
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+*.sqlite3
 db.sqlite3
 
-# Environment variables
-.env
+*.log
 
-# Django
-staticfiles/
+venv/
+env/
+.venv/
+
 media/
 
-# Node
+# Django static collection
+
+staticfiles/
+
+# =========================
+
+# Environment Variables
+
+# =========================
+
+.env
+.env.local
+.env.production
+
+# =========================
+
+# Node / Next.js
+
+# =========================
+
 node_modules/
+
 .next/
 
-# OS
+out/
+
+dist/
+
+# npm
+
+npm-debug.log*
+
+# yarn
+
+yarn-debug.log*
+yarn-error.log*
+
+# pnpm
+
+.pnpm-store/
+
+# =========================
+
+# TypeScript
+
+# =========================
+
+*.tsbuildinfo
+
+# =========================
+
+# IDE
+
+# =========================
+
+.vscode/
+
+.idea/
+
+# =========================
+
+# OS Files
+
+# =========================
+
 .DS_Store
 Thumbs.db
 
+# =========================
+
+# Coverage
+
+# =========================
+
+coverage/
+
+# =========================
+
+# Misc
+
+# =========================
+
+*.swp
+*.swo
+*~
