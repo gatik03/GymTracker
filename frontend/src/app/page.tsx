@@ -1,10 +1,15 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { StatsGrid } from "@/components/dashboard/StatsGrid";
+
 export default function Home() {
   return (
     <AppLayout>
-      <div>
-        Dashboard Coming Soon
+      <div className="space-y-8">
+        <DashboardHero />
+
+        <StatsGrid />
       </div>
     </AppLayout>
   );
