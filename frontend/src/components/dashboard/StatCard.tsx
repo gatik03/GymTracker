@@ -10,12 +10,19 @@ export function StatCard({
   value,
 }: Props) {
   return (
-    <Card className="p-6">
+    <Card
+      className="
+        p-6
+        transition-all
+        hover:scale-[1.02]
+        hover:shadow-xl
+      "
+    >
       <p className="text-sm text-muted-foreground">
         {title}
       </p>
 
-      <h3 className="mt-2 text-3xl font-bold">
+      <h3 className="mt-3 text-4xl font-bold">
         {value}
       </h3>
     </Card>
