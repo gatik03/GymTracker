@@ -1,9 +1,11 @@
+import { AppLayout } from "@/components/layout/AppLayout";
+
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold">
-        Gym Tracker
-      </h1>
-    </main>
+    <AppLayout>
+      <div>
+        Dashboard Coming Soon
+      </div>
+    </AppLayout>
   );
 }
