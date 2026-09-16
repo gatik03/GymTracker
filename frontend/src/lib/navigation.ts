@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Dumbbell,
   Activity,
+  BookOpen,
   User,
 } from "lucide-react";
 
@@ -12,14 +13,19 @@ export const navigationItems = [
     icon: LayoutDashboard,
   },
   {
-    name: "Workouts",
+    name: "Workout",
     href: "/workouts",
     icon: Dumbbell,
   },
   {
-    name: "Analytics",
+    name: "Progress",
     href: "/analytics",
     icon: Activity,
+  },
+  {
+    name: "Journal",
+    href: "/journal",
+    icon: BookOpen,
   },
   {
     name: "Profile",

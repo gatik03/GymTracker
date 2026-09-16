@@ -1,43 +1,41 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-
-
-"""
-
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+
+from config.health import HealthView, ReadinessView
+from workouts.account_views import (
+    EmailVerificationConfirmView,
+    EmailVerificationRequestView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
+    RegistrationView,
+)
+from workouts.oauth_views import OAuthCallbackView, OAuthConnectionsView, OAuthStartView
+from workouts.auth_views import (
+    CookieTokenObtainPairView,
+    CookieTokenRefreshView,
+    CsrfCookieView,
+    LogoutView,
+    SessionView,
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-
-    path('api/', include('workouts.urls')),
-
-    path(
-        'api/token/',
-        TokenObtainPairView.as_view(),
-        name='token_obtain_pair'
-    ),
-
-    path(
-        'api/token/refresh/',
-        TokenRefreshView.as_view(),
-        name='token_refresh'
-    ),
+    path("admin/", admin.site.urls),
+    path("api/", include("workouts.urls")),
+    path("api/auth/csrf/", CsrfCookieView.as_view(), name="auth-csrf"),
+    path("api/auth/login/", CookieTokenObtainPairView.as_view(), name="auth-login"),
+    path("api/auth/register/", RegistrationView.as_view(), name="auth-register"),
+    path("api/auth/verify-email/request/", EmailVerificationRequestView.as_view(), name="auth-verify-email-request"),
+    path("api/auth/verify-email/confirm/", EmailVerificationConfirmView.as_view(), name="auth-verify-email-confirm"),
+    path("api/auth/password-reset/request/", PasswordResetRequestView.as_view(), name="auth-password-reset-request"),
+    path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
+    path("api/auth/refresh/", CookieTokenRefreshView.as_view(), name="auth-refresh"),
+    path("api/auth/logout/", LogoutView.as_view(), name="auth-logout"),
+    path("api/auth/session/", SessionView.as_view(), name="auth-session"),
+    path("api/auth/oauth/connections/", OAuthConnectionsView.as_view(), name="oauth-connections"),
+    path("api/auth/oauth/<str:provider>/start/", OAuthStartView.as_view(), name="oauth-start"),
+    path("api/auth/oauth/<str:provider>/callback/", OAuthCallbackView.as_view(), name="oauth-callback"),
+    path("api/token/", CookieTokenObtainPairView.as_view(), name="token-obtain-pair"),
+    path("api/token/refresh/", CookieTokenRefreshView.as_view(), name="token-refresh"),
+    path("api/health/", HealthView.as_view(), name="health"),
+    path("api/ready/", ReadinessView.as_view(), name="readiness"),
 ]
