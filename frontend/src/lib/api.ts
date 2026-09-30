@@ -1,5 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
+import { isProtectedRoute } from "@/lib/routes";
+
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api",
   withCredentials: true,
@@ -55,7 +57,9 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError: unknown) {
       processQueue(refreshError);
-      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      // A failed refresh only means "session expired" on a page that needs a
+      // session. On public pages a logged-out visitor is the normal case.
+      if (typeof window !== "undefined" && isProtectedRoute(window.location.pathname)) {
         window.location.replace("/login?session=expired");
       }
       return Promise.reject(refreshError);

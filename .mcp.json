@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)/frontend\" && exec npx shadcn mcp"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "exe=$(ls -d \"$HOME\"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1); [ -n \"$exe\" ] || { echo 'No Playwright Chromium found. Run: npx playwright install chromium' >&2; exit 1; }; exec npx chrome-devtools-mcp@1.9.0 --executablePath \"$exe\" --isolated --chrome-arg=--no-sandbox \"$@\"",
+        "chrome-devtools"
+      ]
+    }
+  }
+}

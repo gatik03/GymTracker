@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
 import { LoginCard } from "@/components/auth/LoginCard";
-import { PlateIntro } from "@/components/auth/PlateIntro";
 import { useAuth } from "@/context/AuthContext";
+
+const LoginIntro3D = dynamic(
+  () => import("@/components/auth/LoginIntro3D/LoginIntro3D").then((module) => module.LoginIntro3D),
+  { ssr: false },
+);
 
 type Destination = "/" | "/workouts" | "/analytics" | "/journal";
 const destinations: Destination[] = ["/", "/workouts", "/analytics", "/journal"];
@@ -23,6 +28,8 @@ export default function LoginPage() {
   const [notice, setNotice] = useState("");
   const [introReady, setIntroReady] = useState(false);
   const [morphing, setMorphing] = useState(false);
+  const [cssStack, setCssStack] = useState(false);
+  const stackSlotRef = useRef<HTMLDivElement | null>(null);
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -47,6 +54,7 @@ export default function LoginPage() {
   const resolveIntro = useCallback(() => { setMorphing(false); setIntroReady(true); }, []);
   const beginMorph = useCallback(() => setMorphing(true), []);
   const resetIntro = useCallback(() => { setMorphing(false); setIntroReady(false); }, []);
+  const showCssStack = useCallback(() => setCssStack(true), []);
   const updateError = (message: string) => {
     setError(message);
     setNotice("");
@@ -54,10 +62,9 @@ export default function LoginPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#08090b] text-zinc-100">
-      <PlateIntro onReady={resolveIntro} onMorphStart={beginMorph} onReplay={resetIntro} />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.025),transparent_38%),linear-gradient(to_bottom,transparent_60%,rgba(0,0,0,0.45))]" />
-      <div className={"relative z-20 flex min-h-screen items-center justify-center px-4 py-16 transition-opacity duration-700 sm:px-6 " + ((morphing || introReady) ? "opacity-100" : "pointer-events-none opacity-0")} aria-hidden={!introReady}>
-        <LoginCard destination={destination} visible={morphing || introReady} morphing={morphing} ready={introReady} error={error} notice={notice} onError={updateError} />
+      <LoginIntro3D stackSlotRef={stackSlotRef} onReady={resolveIntro} onMorphStart={beginMorph} onReplay={resetIntro} onFallback={showCssStack} />
+      <div className={"login-stage relative z-20 " + ((morphing || introReady) ? "" : "pointer-events-none")} aria-hidden={!introReady}>
+        <LoginCard destination={destination} visible={morphing || introReady} morphing={morphing} ready={introReady} error={error} notice={notice} onError={updateError} stackSlotRef={stackSlotRef} cssStack={cssStack} />
       </div>
     </main>
   );

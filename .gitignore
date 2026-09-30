@@ -30,6 +30,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# frontend/src/lib/ is application source, not a Python build directory.
+!frontend/src/lib/
 lib64/
 parts/
 sdist/

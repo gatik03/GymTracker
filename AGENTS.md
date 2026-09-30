@@ -168,7 +168,12 @@ gym_Tracker/
 - All access and refresh tokens are handled in **HttpOnly, SameSite cookies**.
 - All non-GET requests require a valid CSRF token header (`X-CSRFToken`).
 
-### 3. Coding & Modification Practices
+### 3. Frontend Design Workflow
+- Any change to what a user sees follows [FrontendWorkflow.md](FrontendWorkflow.md): research, inspect existing code, direction, design system, implement, run, inspect in a real browser, Impeccable critique, fix, responsive QA, accessibility QA, final visual verification.
+- [PRODUCT.md](PRODUCT.md) says who the product is for; [Design.md](Design.md) is the visual system. Both outrank any design skill.
+- Never report UI work as visually complete from lint, TypeScript or build results alone.
+
+### 4. Coding & Modification Practices
 - **No Mock Fallbacks**: Never introduce dummy placeholder data or swallow API exceptions silently.
 - **Preserve API Contracts**: Ensure frontend TypeScript types in `frontend/src/lib/` stay strictly synchronized with DRF serializers in `backend/workouts/serializers.py`.
 - **Type Safety**: Keep TypeScript strict mode clean with zero `any` evasions.
@@ -200,3 +205,4 @@ npm --prefix frontend run build
 - 📘 [Master Readme](README.md)
 - 🛡️ [Security Policy & Controls](SECURITY.md)
 - 📂 [Full Documentation Archive](docs/README.md)
+- 🎨 [Frontend Workflow](FrontendWorkflow.md) · [Product](PRODUCT.md) · [Design](Design.md)
