@@ -351,7 +351,7 @@ function IntroScene({ apiRef, stackSlotRef, runKey, mode, debugMode, debugAt, on
   </>);
 }
 
-const skipButtonClass = "pointer-events-auto absolute bottom-6 right-6 z-30 rounded-sm border border-white/10 px-3 py-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] transition hover:border-orange-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400";
+const skipButtonClass = "pointer-events-auto absolute bottom-4 right-4 z-30 inline-flex min-h-11 items-center rounded px-3 text-[0.8125rem] text-zinc-400 [font-family:var(--font-geist-sans)] transition-colors hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400";
 
 export function LoginIntro3D({ stackSlotRef, onReady, onMorphStart, onReplay, onFallback }: LoginIntro3DProps) {
   const reducedMotion = useReducedMotion();
@@ -391,8 +391,8 @@ export function LoginIntro3D({ stackSlotRef, onReady, onMorphStart, onReplay, on
 
   return (<div className="pointer-events-none absolute inset-0 overflow-hidden">
     {mode !== "pending" && !webglFailed ? <div className="absolute inset-0" aria-hidden="true"><WebGLBoundary onError={handleWebGLFailure}><Canvas shadows="percentage" frameloop={settled ? "demand" : "always"} dpr={[1, 2]} camera={{ fov: HERO_FOV, near: 0.1, far: 90, position: [3.6, 2, 12] }} gl={{ antialias: true, alpha: false }}><IntroScene apiRef={apiRef} stackSlotRef={stackSlotRef} runKey={runKey} mode={mode} debugMode={debugMode} debugAt={debugAt} onPhase={setPhase} onDebug={setDebugInfo} onReady={onReady} onMorphStart={onMorphStart} /></Canvas></WebGLBoundary></div> : null}
-    {mode === "play" && !settled && !webglFailed ? <button type="button" onClick={skip} aria-label="Skip the barbell intro" className={`${skipButtonClass} text-zinc-500 hover:text-zinc-200`}>Skip intro</button> : null}
-    {settled && !reducedMotion && !webglFailed ? <button type="button" onClick={replay} aria-label="Replay the barbell intro" className={`${skipButtonClass} text-zinc-600 hover:text-zinc-300`}>Replay intro</button> : null}
+    {mode === "play" && !settled && !webglFailed ? <button type="button" onClick={skip} aria-label="Skip the barbell intro" className={skipButtonClass}>Skip intro</button> : null}
+    {settled && !reducedMotion && !webglFailed ? <button type="button" onClick={replay} aria-label="Replay the barbell intro" className={skipButtonClass}>Replay intro</button> : null}
     {debugMode ? <pre className="pointer-events-none absolute left-4 top-4 z-40 rounded border border-white/10 bg-black/70 p-3 font-mono text-[10px] leading-5 text-zinc-300">{`phase: ${debugInfo.phase}\nelapsed: ${debugInfo.elapsed.toFixed(2)}s\nbar rotation: ${debugInfo.barRotation.toFixed(2)}rad\nreleased: ${debugInfo.releasedCount}/${PLATE_SPECS.length}\nstacked: ${debugInfo.stackedCount}/${PLATE_SPECS.length}`}</pre> : null}
   </div>);
 }

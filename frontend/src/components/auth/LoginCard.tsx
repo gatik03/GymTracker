@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
-import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { getApiErrorMessage } from "@/lib/apiErrors";
@@ -32,39 +32,43 @@ export function LoginCard({ destination, visible, morphing, ready, error, notice
     catch (loginError) { onError(getApiErrorMessage(loginError, "Unable to sign in with those credentials.")); }
   };
 
-  const head = (<>
-    <p className="login-wordmark" aria-label="STACKD">STACKD<span>.</span></p>
-    <h1 id="signin-title" className="login-title">Load your next session</h1>
-    {error ? <div role="alert" className="login-message login-message--error">{error}</div> : null}
-    {notice ? <div role="status" className="login-message login-message--notice">{notice}</div> : null}
-  </>);
-
-  const rows = (<>
-    <form className="login-form" onSubmit={submitLogin}>
-      <fieldset disabled={!ready || isLoading} className="login-fieldset">
-        <div className="login-row login-row--field">
-          <label htmlFor="identifier" className="login-label">Email or username</label>
-          <input ref={identifierRef} id="identifier" autoComplete="username" type="text" required maxLength={254} value={identifier} onChange={(event) => setIdentifier(event.target.value)} className="login-input" placeholder="you@example.com" />
-        </div>
-        <div className="login-row login-row--field">
-          <div className="login-row__labels"><label htmlFor="password" className="login-label">Password</label><Link href="/forgot-password" tabIndex={ready ? 0 : -1} className="login-link login-link--quiet">Forgot password?</Link></div>
-          <div className="login-input-wrap"><input id="password" autoComplete="current-password" type={showPassword ? "text" : "password"} required value={password} onChange={(event) => setPassword(event.target.value)} className="login-input login-input--password" placeholder="Enter password" /><button type="button" tabIndex={ready ? 0 : -1} aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((isVisible) => !isVisible)} className="login-password-toggle">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
-        </div>
-        <div className="login-row login-row--action">
-          <button type="submit" disabled={!ready || isLoading || !identifier.trim() || !password} className="login-submit group">{isLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in</> : <>Log in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></>}</button>
-        </div>
-      </fieldset>
-    </form>
-    <div className={!ready ? "login-oauth pointer-events-none" : "login-oauth"}>
-      <OAuthButtons destination={destination} onError={onError} variant="plate" />
-    </div>
-  </>);
-
-  const foot = <p className="login-signup">New to STACKD? <Link href="/register" tabIndex={ready ? 0 : -1} className="login-link">Create your profile</Link></p>;
-
   return (
     <section aria-labelledby="signin-title" className="login-interface">
-      <PlateStackSurface head={head} rows={rows} foot={foot} status={!visible ? "hidden" : morphing ? "morphing" : "ready"} stackSlotRef={stackSlotRef} cssStack={cssStack} />
+      <PlateStackSurface status={!visible ? "hidden" : morphing ? "morphing" : "ready"} stackSlotRef={stackSlotRef} cssStack={cssStack}>
+        <header className="login-head">
+          <p className="login-wordmark">STACKD<span>.</span></p>
+          <h1 id="signin-title" className="login-title">Log in to your training log</h1>
+        </header>
+
+        {error ? <div role="alert" className="login-message login-message--error">{error}</div> : null}
+        {notice ? <div role="status" className="login-message login-message--notice">{notice}</div> : null}
+
+        <form className="login-form" onSubmit={submitLogin}>
+          <fieldset disabled={!ready || isLoading} className="login-fieldset">
+            <div className="login-field">
+              <label htmlFor="identifier" className="login-label">Email or username</label>
+              <input ref={identifierRef} id="identifier" autoComplete="username" type="text" required maxLength={254} value={identifier} onChange={(event) => setIdentifier(event.target.value)} className="login-input" placeholder="you@example.com" />
+            </div>
+            <div className="login-field login-field--password">
+              <label htmlFor="password" className="login-label">Password</label>
+              <div className="login-input-wrap">
+                <input id="password" autoComplete="current-password" type={showPassword ? "text" : "password"} required value={password} onChange={(event) => setPassword(event.target.value)} className="login-input login-input--password" />
+                <button type="button" tabIndex={ready ? 0 : -1} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((isVisible) => !isVisible)} className="login-password-toggle">{showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}</button>
+              </div>
+              {/* After the input in the DOM so Tab goes field to field; placed on the label row visually. */}
+              <Link href="/forgot-password" tabIndex={ready ? 0 : -1} className="login-forgot">Forgot password?</Link>
+            </div>
+            <button type="submit" disabled={!ready || isLoading || !identifier.trim() || !password} className="login-submit">{isLoading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Logging in</> : "Log in"}</button>
+          </fieldset>
+        </form>
+
+        <div className={!ready ? "login-alt pointer-events-none" : "login-alt"} role="group" aria-labelledby="login-alt-label">
+          <p id="login-alt-label" className="login-alt__label">Or continue with</p>
+          <OAuthButtons destination={destination} onError={onError} variant="plate" />
+        </div>
+
+        <p className="login-signup">New to STACKD? <Link href="/register" tabIndex={ready ? 0 : -1} className="login-link">Create an account</Link></p>
+      </PlateStackSurface>
     </section>
   );
 }
