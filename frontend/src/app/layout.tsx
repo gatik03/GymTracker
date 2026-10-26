@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({subsets:['latin'],variable:'--font-inter'});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -18,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GymTracker — Training, Progress, and Journal",
+  title: "STACKD — Training, Progress, and Journal",
   description: "Log workouts, follow your progress, track bodyweight, and keep a private training journal.",
   robots: { index: false, follow: false },
 };
@@ -31,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("dark", "h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn("dark", "h-full", "antialiased", geistMono.variable, "font-sans", inter.variable)}
     >
       <body className="min-h-full flex flex-col">
         <QueryProvider>

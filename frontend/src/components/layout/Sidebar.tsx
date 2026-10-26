@@ -14,8 +14,8 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 text-zinc-100 md:flex">
-      <Link href="/" aria-label="GymTracker dashboard" className="m-4 rounded-xl px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50">
-        <span className="text-xl font-bold tracking-tight text-zinc-50">Gym<span className="text-emerald-400">Tracker</span></span>
+      <Link href="/" aria-label="STACKD dashboard" className="m-4 rounded-xl px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50">
+        <span className="text-xl font-bold tracking-tight text-zinc-50">STACKD<span className="text-emerald-400">.</span></span>
         <span className="mt-1 block text-xs text-zinc-600">Track. Progress. Improve.</span>
       </Link>
 

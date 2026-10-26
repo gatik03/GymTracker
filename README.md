@@ -10,6 +10,20 @@
 
 ---
 
+## Screenshots
+
+### Login
+
+![STACKD login screen with the 3D plate stack, email and password fields, and Google and GitHub sign-in options](docs/screenshots/login.png)
+
+### Dashboard
+
+The dashboard below uses the fictional records in the [sample demo account](#optional-sample-dashboard-data).
+
+![STACKD demo dashboard showing monthly training volume, workout streak, muscle distribution, recent workouts and heavy performances](docs/screenshots/dashboard.png)
+
+---
+
 ## ✨ Features & Capabilities
 
 - **Secure Cookie-Based Authentication**:
@@ -126,6 +140,18 @@ venv/bin/python backend/manage.py seed_exercises
   ```
 
 Open `http://localhost:3000` in your browser. Verification and password reset codes are output to the backend terminal when using the console email backend.
+
+### Optional: sample dashboard data
+
+After migrating the database, create a separate demo account:
+
+```bash
+venv/bin/python backend/manage.py seed_demo
+```
+
+Log in with username **`demo`** and password **`StackdDemo2026!`**. The account contains 21 completed workouts across eight weeks, 189 sets across nine exercises, 28 bodyweight measurements and three journal entries. This populates dashboard volume, records, muscle distribution, workout history and progress charts through the real API.
+
+The records are fictional and labelled as samples. The command also seeds the built-in exercise catalog. Rerunning it preserves existing records and passwords; it refuses to overwrite an unrelated account named `demo`. Sample dates are relative to the first seed and do not refresh automatically. Regular accounts keep their own data. Anyone using the shared demo login can change its sample records, so use it only for demonstration data.
 
 ---
 

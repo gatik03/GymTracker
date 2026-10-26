@@ -11,20 +11,15 @@ export function StatCard({
 }: Props) {
   return (
     <Card
-      className="
-        p-6
-        transition-all
-        hover:scale-[1.02]
-        hover:shadow-xl
-      "
+      className="border-0 border-l border-border bg-transparent p-4 shadow-none ring-0"
     >
       <p className="text-sm text-muted-foreground">
         {title}
       </p>
 
-      <h3 className="mt-3 text-4xl font-bold">
+      <p className="mt-3 text-3xl font-semibold tabular-nums">
         {value}
-      </h3>
+      </p>
     </Card>
   );
 }

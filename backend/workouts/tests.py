@@ -274,6 +274,28 @@ class WorkoutsBodyWeightTest(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
 
+    def test_bodyweight_change_requires_two_recent_entries(self):
+        today = datetime.date.today()
+        BodyWeightEntry.objects.create(user=self.other_user, weight=80, date=today)
+        BodyWeightEntry.objects.create(user=self.user, weight=85, date=today - datetime.timedelta(days=31))
+        for count in (0, 1):
+            with self.subTest(recent_entries=count):
+                if count:
+                    BodyWeightEntry.objects.create(user=self.user, weight=84, date=today)
+                response = self.client.get("/api/analytics/bodyweight/rate/")
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIsNone(response.data["total_change"])
+                self.assertIsNone(response.data["rate_per_week"])
+                self.assertEqual(response.data["current_weight"], 84 if count else None)
+
+    def test_bodyweight_unchanged_measurements_report_real_zero(self):
+        today = datetime.date.today()
+        for days in (0, 7):
+            BodyWeightEntry.objects.create(user=self.user, weight=84, date=today - datetime.timedelta(days=days))
+        response = self.client.get("/api/analytics/bodyweight/rate/")
+        self.assertEqual(response.data["total_change"], 0)
+        self.assertEqual(response.data["rate_per_week"], 0)
+
     def test_bodyweight_crud(self):
         response = self.client.post("/api/bodyweight/", {
             "weight": 82.5,

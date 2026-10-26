@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useCreateWorkout } from "@/hooks/useWorkouts";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiErrors";
 
 interface NewWorkoutDialogProps {
   open: boolean;
@@ -35,6 +35,7 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
   const [date, setDate] = useState(localToday);
   const [workoutType, setWorkoutType] = useState("custom");
   const [notes, setNotes] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
@@ -43,22 +44,25 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
     setWorkoutType("custom");
     setNotes("");
     setError(null);
+    setFieldErrors({});
     createWorkout.reset();
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && !createWorkout.isPending) reset();
+    if (createWorkout.isPending) return;
+    if (!nextOpen) reset();
     onOpenChange(nextOpen);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim() || !date) {
-      setError("Add a workout name and date to get started.");
+      setFieldErrors({ title: !title.trim() ? "Enter a workout name." : "", date: !date ? "Choose a date." : "" });
       return;
     }
 
     setError(null);
+    setFieldErrors({});
     try {
       const workout = await createWorkout.mutateAsync({
         title: title.trim(),
@@ -70,6 +74,7 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
       reset();
       router.push(`/workouts/${workout.id}`);
     } catch (submitError) {
+      setFieldErrors(getApiFieldErrors(submitError));
       setError(
         getApiErrorMessage(
           submitError,
@@ -103,15 +108,17 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
               Workout name
             </label>
             <Input
-              id="workout-title"
+              id="workout-title" aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? "workout-title-error" : undefined}
               autoFocus
               autoComplete="off"
               maxLength={100}
+              required
               placeholder="Push day"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               className="border-zinc-800 bg-zinc-900 text-zinc-100 focus-visible:ring-emerald-500/40"
             />
+            {fieldErrors.title ? <p id="workout-title-error" role="alert" className="text-sm text-red-300">{fieldErrors.title}</p> : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -120,13 +127,14 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
                 Date
               </label>
               <Input
-                id="workout-date"
+                id="workout-date" aria-invalid={Boolean(fieldErrors.date)} aria-describedby={fieldErrors.date ? "workout-date-error" : undefined}
                 type="date"
                 required
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 className="border-zinc-800 bg-zinc-900 text-zinc-100 focus-visible:ring-emerald-500/40"
               />
+            {fieldErrors.date ? <p id="workout-date-error" role="alert" className="text-sm text-red-300">{fieldErrors.date}</p> : null}
             </div>
 
             <div className="space-y-1.5">
@@ -167,7 +175,7 @@ export function NewWorkoutDialog({ open, onOpenChange }: NewWorkoutDialogProps) 
 
           <Button
             type="submit"
-            disabled={createWorkout.isPending || !title.trim() || !date}
+            disabled={createWorkout.isPending}
             className="w-full bg-emerald-500 font-semibold text-zinc-950 hover:bg-emerald-400"
           >
             {createWorkout.isPending ? (

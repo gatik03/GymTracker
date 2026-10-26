@@ -100,7 +100,7 @@ export default function VerifyEmailPage() {
           </label>
           <button
             type="submit"
-            disabled={isSubmitting || code.length !== 6}
+            disabled={isSubmitting}
             className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" aria-label="Verifying email" /> : <><CheckCircle2 className="h-4 w-4" aria-hidden="true" />Verify email</>}

@@ -13,7 +13,7 @@ Two audiences, confirmed by the owner on 2026-09-30:
 - **Recruiters and hiring engineers.** STACKD is deployed as a demo site that shows the owner can build a full-stack product. These visitors arrive cold, spend little time, and judge what they can see and click: the entry experience, whether real features work end to end, and whether the build looks deliberate.
 - **The lifter inside the product.** The product itself is a working gym tracker. Its in-product user logs sets between exercises, usually on a phone, and later reviews progress and journal entries.
 
-How a recruiter gets into the app is undecided: see Capabilities and Constraints.
+Visitors can use the seeded demo account described in Capabilities and Constraints.
 
 ## Product Purpose
 
@@ -37,12 +37,15 @@ From `PRD.md`, `Architecture.md` and the code; not re-confirmed item by item:
 - Exercise library (built-in and custom), workout sessions and set logging, drafts.
 - Dashboard, progress analytics (volume, PRs, estimated 1RM, muscle distribution), bodyweight, private journal.
 - Out of scope unless explicitly decided: social features, payments, medical or nutrition advice, AI/ML coaching, wearables, a native app.
-- Django is the only authorization boundary. No mock fallbacks and no invented training data.
+- Django is the only authorization boundary. No mock fallbacks; fictional sample records are isolated to the explicitly requested demo account.
+
+Demo access (owner requested sample data on 2026-10-26):
+
+- **Demo access.** `seed_demo` creates a normal, verified, non-staff `demo` account. Visitors use the existing login form; there is no authentication bypass or guest-login endpoint.
+- **Demo data.** Only that account receives clearly labelled fictional workouts, bodyweight and journal entries. Normal new accounts remain empty. All charts still use persisted records and the Django API.
 
 Undecided:
 
-- **Demo access.** Whether recruiters get a seeded demo account, a one-click guest login, or must register. No such flow exists in the code today.
-- **Demo data.** Whether a fresh account should show seeded history so dashboards and charts are not empty on first view.
 - **`PRD.md` framing.** `PRD.md` still describes a private personal tool with the owner as the primary user. It predates the recruiter-demo purpose recorded here and has not been revised.
 
 ## Brand Commitments
@@ -60,7 +63,7 @@ Undecided:
 
 1. **Working beats impressive.** A feature that functions end to end is stronger evidence than a visual effect around one that does not.
 2. **First impressions are the brief.** A cold visitor decides quickly; the entry experience and the first authenticated screen carry the most weight.
-3. **Honest data.** Show recorded facts, label estimates, never fabricate records to fill a chart.
+3. **Honest data.** Show recorded facts and label estimates. Fictional sample records belong only to the explicitly identified demo account; never mix them into real users' histories or use mock chart fallbacks.
 4. **Logging stays fast.** The set-logging flow must remain quick enough to use between sets, whatever is built around it.
 5. **Security is part of the demonstration.** Server-side authorization, cookie-based sessions and CSRF protection are features to keep intact, not obstacles to polish.
 

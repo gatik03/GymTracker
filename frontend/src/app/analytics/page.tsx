@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
 import {
@@ -9,7 +9,8 @@ import {
   useVolumePerMuscleGroup,
   useWeeklyVolume,
 } from "@/hooks/useAnalytics";
-import { useExercises } from "@/hooks/useExercises";
+import { ExercisePicker } from "@/components/workouts/ExercisePicker";
+import { format, parseISO } from "date-fns";
 import {
   Bar,
   BarChart,
@@ -40,17 +41,14 @@ type ProgressTab = "overview" | "exercises" | "records";
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<ProgressTab>("overview");
-  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [selectedExerciseName, setSelectedExerciseName] = useState("");
   const [selectedExerciseId, setSelectedExerciseId] = useState(0);
-  const deferredSearch = useDeferredValue(exerciseSearch);
 
   const weeklyVolume = useWeeklyVolume();
   const muscleVolume = useVolumePerMuscleGroup();
   const personalRecords = usePersonalRecords();
-  const exerciseCatalog = useExercises({ search: deferredSearch, pageSize: 50 });
   const exerciseProgress = useExerciseProgress(selectedExerciseId);
 
-  const exercises = exerciseCatalog.data?.results ?? [];
   const muscleData = (muscleVolume.data ?? []).map((item) => ({
     name: item.muscle_group.replace(/_/g, " "),
     value: item.total_volume,
@@ -107,9 +105,9 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weeklyVolume.data}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                      <XAxis dataKey="week" stroke="#71717a" fontSize={11} />
+                      <XAxis tickFormatter={(value: string) => format(parseISO(value), "MMM d")} dataKey="week" stroke="#71717a" fontSize={11} />
                       <YAxis stroke="#71717a" fontSize={11} width={56} />
-                      <Tooltip contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
+                      <Tooltip labelFormatter={(value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? format(parseISO(value), "MMM d, yyyy") : value} contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
                       <Bar dataKey="total_volume" name="Volume (kg)" fill="#10b981" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -135,7 +133,7 @@ export default function AnalyticsPage() {
                           <Cell key={item.name} fill={MUSCLE_COLORS[index % MUSCLE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
+                      <Tooltip labelFormatter={(value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? format(parseISO(value), "MMM d, yyyy") : value} contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -146,43 +144,8 @@ export default function AnalyticsPage() {
 
         {activeTab === "exercises" && (
           <div className="space-y-6">
-            <Card className="border-zinc-800 bg-zinc-900/50 p-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="progress-exercise-search" className="text-sm font-medium text-zinc-300">
-                    Search exercises
-                  </label>
-                  <input
-                    id="progress-exercise-search"
-                    type="search"
-                    value={exerciseSearch}
-                    onChange={(event) => setExerciseSearch(event.target.value)}
-                    placeholder="Bench press, squat, row…"
-                    className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="progress-exercise" className="text-sm font-medium text-zinc-300">
-                    Exercise
-                  </label>
-                  <select
-                    id="progress-exercise"
-                    value={selectedExerciseId || ""}
-                    onChange={(event) => setSelectedExerciseId(Number(event.target.value))}
-                    className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    <option value="">Choose an exercise</option>
-                    {exercises.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>
-                        {exercise.name} · {exercise.muscle_group.replace(/_/g, " ")}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {exerciseCatalog.isFetching && (
-                <p className="mt-3 text-xs text-zinc-500">Searching the exercise catalog…</p>
-              )}
+            <Card className="overflow-visible border-zinc-800 bg-zinc-900/50 p-6">
+              <ExercisePicker value={selectedExerciseId} selectedName={selectedExerciseName} onChange={(exercise) => { setSelectedExerciseId(exercise.id); setSelectedExerciseName(exercise.name); }} />
             </Card>
 
             <Card className="border-zinc-800 bg-zinc-900/50 p-6">
@@ -203,10 +166,10 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={exerciseProgress.data}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                      <XAxis dataKey="date" stroke="#71717a" fontSize={11} />
+                      <XAxis tickFormatter={(value: string) => format(parseISO(value), "MMM d")} dataKey="date" stroke="#71717a" fontSize={11} />
                       <YAxis yAxisId="strength" stroke="#71717a" fontSize={11} width={48} />
                       <YAxis yAxisId="volume" orientation="right" stroke="#71717a" fontSize={11} width={64} />
-                      <Tooltip contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
+                      <Tooltip labelFormatter={(value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? format(parseISO(value), "MMM d, yyyy") : value} contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }} />
                       <Line yAxisId="strength" type="monotone" dataKey="max_weight" name="Max weight (kg)" stroke="#22d3ee" strokeWidth={2.5} />
                       <Line yAxisId="strength" type="monotone" dataKey="estimated_1rm" name="Estimated 1RM (kg)" stroke="#10b981" strokeWidth={2.5} />
                       <Line yAxisId="volume" type="monotone" dataKey="total_volume" name="Volume (kg)" stroke="#a78bfa" strokeWidth={2} />

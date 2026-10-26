@@ -1,9 +1,9 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, Check, ChevronDown, Clock3, Dumbbell, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, Clock3, Dumbbell, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AnatomyMuscleMap } from "@/components/workouts/AnatomyMuscleMap";
@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useCreateExercise, useCreateExerciseSet, useDeleteExerciseSet, useExercises, useUpdateExerciseSet } from "@/hooks/useExercises";
-import { type ExerciseSet, useCompleteWorkout, useDeleteWorkout, useWorkoutSession } from "@/hooks/useWorkouts";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { ExercisePicker } from "@/components/workouts/ExercisePicker";
+import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
+import { type Exercise, useCreateExercise, useCreateExerciseSet, useDeleteExerciseSet, useUpdateExerciseSet } from "@/hooks/useExercises";
+import { type ExerciseSet, useCompleteWorkout, useDeleteWorkout, useWorkoutSession, useWorkoutSessions } from "@/hooks/useWorkouts";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiErrors";
 
 interface ExerciseGroup {
   exerciseId: number;
@@ -38,10 +40,8 @@ export default function WorkoutDetailPage() {
   const workout = workoutQuery.data;
   const isDraft = workout?.status === "draft";
 
-  const [exerciseSearch, setExerciseSearch] = useState("");
-  const deferredSearch = useDeferredValue(exerciseSearch);
-  const exercisesQuery = useExercises({ search: deferredSearch, pageSize: 50 });
-  const exercises = exercisesQuery.data?.results ?? [];
+  const history = useWorkoutSessions();
+  const [selectedRecord, setSelectedRecord] = useState<Exercise | null>(null);
   const createExercise = useCreateExercise();
   const createSet = useCreateExerciseSet();
   const updateSet = useUpdateExerciseSet();
@@ -59,9 +59,21 @@ export default function WorkoutDetailPage() {
   const [customName, setCustomName] = useState("");
   const [customMuscle, setCustomMuscle] = useState("chest");
   const [finishOpen, setFinishOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ExerciseSet | "workout" | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletedSet, setDeletedSet] = useState<ExerciseSet | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [loggerVisible, setLoggerVisible] = useState(true);
+
+  const observeLogger = useCallback((logger: HTMLDivElement | null) => {
+    if (!logger) return;
+    const observer = new IntersectionObserver(([entry]) => setLoggerVisible(entry.isIntersecting));
+    observer.observe(logger);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isDraft) return;
@@ -88,14 +100,19 @@ export default function WorkoutDetailPage() {
     return sets.length ? sets.reduce((latest, item) => item.id > latest.id ? item : latest) : null;
   }, [workout?.sets]);
 
-  const selectedRecord = exercises.find((exercise) => exercise.id === Number(selectedExercise));
   const selectedGroup = groups.find((group) => group.exerciseId === Number(selectedExercise));
+  const previousSession = history.data
+    ?.filter((session) => session.date <= (workout?.date ?? "") && session.sets.some((set) => set.exercise === Number(selectedExercise)))
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.completed_at ?? "").localeCompare(a.completed_at ?? ""))[0];
+  const previousSets = previousSession?.sets.filter((set) => set.exercise === Number(selectedExercise));
   const activeMuscle = selectedRecord?.muscle_group || selectedGroup?.muscleGroup || lastLoggedSet?.exercise_muscle_group || "";
   const activeExerciseName = selectedRecord?.name || selectedGroup?.exerciseName || lastLoggedSet?.exercise_name;
 
-  const selectExercise = (value: string) => {
+  const selectExercise = (value: string, record?: Exercise) => {
+    setSelectedRecord(record ?? null);
     setSelectedExercise(value);
     setError(null);
+    setFieldErrors({});
     const previousSets = workout?.sets.filter((item) => item.exercise === Number(value)) ?? [];
     if (previousSets.length) {
       const previous = previousSets.reduce((latest, item) => item.set_number > latest.set_number ? item : latest);
@@ -113,6 +130,7 @@ export default function WorkoutDetailPage() {
     try {
       const exercise = await createExercise.mutateAsync({ name: customName.trim(), muscle_group: customMuscle });
       setSelectedExercise(String(exercise.id));
+      setSelectedRecord(exercise);
       setCustomName("");
       setShowCustomExercise(false);
     } catch (creationError) {
@@ -150,6 +168,7 @@ export default function WorkoutDetailPage() {
     const numbers = workout?.sets.filter((item) => item.exercise === exerciseId).map((item) => item.set_number) ?? [];
     const nextSetNumber = Math.max(0, ...numbers) + 1;
     setError(null);
+    setFieldErrors({});
     setSaveMessage(null);
     try {
       await createSet.mutateAsync({ workout_session: workoutId, exercise: exerciseId, set_number: nextSetNumber, weight: parsedWeight, reps: parsedReps, rpe: parsedRpe, rir: parsedRir, notes: setNote.trim() });
@@ -158,6 +177,7 @@ export default function WorkoutDetailPage() {
       setSetNote("");
       setSaveMessage(`Set ${nextSetNumber} saved`);
     } catch (creationError) {
+      setFieldErrors(getApiFieldErrors(creationError));
       setError(getApiErrorMessage(creationError, "That set could not be saved. Please try again."));
     }
   };
@@ -178,14 +198,28 @@ export default function WorkoutDetailPage() {
     }
   };
 
-  const removeSet = async (setId: number) => {
-    if (!window.confirm("Delete this set? This cannot be undone.")) return;
+  const removeSet = async (set: ExerciseSet) => {
+    setDeleteError(null);
+    try {
+      await deleteSet.mutateAsync(set.id);
+      setDeletedSet(set);
+      setDeleteTarget(null);
+      setSaveMessage("Set deleted. You can undo this before finishing the workout.");
+    } catch (error) {
+      setDeleteError(getApiErrorMessage(error, "The set could not be deleted."));
+    }
+  };
+
+  const undoDelete = async () => {
+    if (!deletedSet) return;
     setError(null);
     try {
-      await deleteSet.mutateAsync(setId);
-      setSaveMessage("Set deleted");
-    } catch (deleteError) {
-      setError(getApiErrorMessage(deleteError, "The set could not be deleted."));
+      const { workout_session, exercise, set_number, weight, reps, rpe, rir, notes } = deletedSet;
+      await createSet.mutateAsync({ workout_session, exercise, set_number, weight, reps, rpe, rir, notes });
+      setDeletedSet(null);
+      setSaveMessage("Deleted set restored");
+    } catch (error) {
+      setError(getApiErrorMessage(error, "The set could not be restored. Please try again."));
     }
   };
 
@@ -202,13 +236,12 @@ export default function WorkoutDetailPage() {
   };
 
   const removeWorkout = async () => {
-    const label = isDraft ? "Discard this workout and every logged set?" : "Delete this completed workout?";
-    if (!window.confirm(`${label} This cannot be undone.`)) return;
+    setDeleteError(null);
     try {
       await deleteWorkout.mutateAsync(workoutId);
       router.push("/workouts");
     } catch (deleteError) {
-      setError(getApiErrorMessage(deleteError, "The workout could not be removed."));
+      setDeleteError(getApiErrorMessage(deleteError, "The workout could not be removed."));
     }
   };
 
@@ -222,7 +255,7 @@ export default function WorkoutDetailPage() {
 
   return (
     <AppLayout>
-      <main className="mx-auto max-w-[1400px] space-y-6">
+      <main className={`mx-auto max-w-[1400px] space-y-6 ${isDraft ? "pb-20 lg:pb-0" : ""}`}>
         <header className="space-y-4">
           <Link href="/workouts" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-200"><ArrowLeft className="h-4 w-4" /> Workouts</Link>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -235,18 +268,19 @@ export default function WorkoutDetailPage() {
               <p className="mt-2 flex items-center gap-2 text-sm text-zinc-500"><CalendarDays className="h-4 w-4" /> {formatWorkoutDate(workout.date)}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {isDraft ? <Button onClick={() => setFinishOpen(true)} disabled={workout.total_sets === 0} className="bg-emerald-400 font-semibold text-zinc-950 hover:bg-emerald-300"><Check className="h-4 w-4" /> Finish workout</Button> : null}
-              <Button variant="outline" className="border-zinc-800 text-zinc-400 hover:text-red-300" onClick={() => void removeWorkout()} disabled={deleteWorkout.isPending}><Trash2 className="h-4 w-4" /> {isDraft ? "Discard" : "Delete"}</Button>
+              {isDraft ? <Button onClick={() => setFinishOpen(true)} disabled={workout.total_sets === 0} aria-describedby="workout-status-help" className="bg-emerald-400 font-semibold text-zinc-950 hover:bg-emerald-300"><Check className="h-4 w-4" /> Finish workout</Button> : null}
+              <Button variant="outline" className="border-zinc-800 text-zinc-400 hover:text-red-300" onClick={() => { setDeleteError(null); setDeleteTarget("workout"); }} disabled={deleteWorkout.isPending}><Trash2 className="h-4 w-4" /> {isDraft ? "Discard" : "Delete"}</Button>
             </div>
           </div>
         </header>
+        <p id="workout-status-help" className="text-sm text-muted-foreground">{isDraft ? workout.total_sets === 0 ? "Log at least one set before finishing your workout." : "Your logged sets are saved. Finish when you are ready to add this session to your history." : "Completed sessions are read-only to preserve your training history."}</p>
 
         {justCompleted ? <div role="status" className="flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] p-4"><span className="mt-0.5 rounded-full bg-emerald-400 p-1 text-zinc-950"><Check className="h-4 w-4" /></span><div><p className="font-semibold text-zinc-100">Workout complete</p><p className="mt-0.5 text-sm text-zinc-400">This session now contributes to your history and progress.</p></div></div> : null}
         {error ? <div role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div> : null}
         <p className="sr-only" aria-live="polite">{saveMessage}</p>
 
         <div className="grid items-start gap-6 lg:grid-cols-2">
-          <section className="space-y-5" aria-label="Workout logger">
+          <section className="flex min-w-0 flex-col gap-5" aria-label="Workout logger">
             <Card className="border-zinc-800 bg-zinc-900/35 p-4 sm:p-5">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div><p className="text-xs text-zinc-600">Exercises</p><p className="mt-1 text-lg font-semibold text-zinc-100">{workout.exercise_count}</p></div>
@@ -262,14 +296,14 @@ export default function WorkoutDetailPage() {
               <Card key={group.exerciseId} className="overflow-hidden border-zinc-800 bg-zinc-900/35">
                 <button type="button" onClick={() => selectExercise(String(group.exerciseId))} className="flex w-full items-center justify-between border-b border-zinc-800 px-4 py-3 text-left transition hover:bg-zinc-800/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/40"><div><h2 className="font-semibold text-zinc-100">{group.exerciseName}</h2><p className="mt-0.5 text-xs capitalize text-zinc-600">{group.muscleGroup.replace("_", " ")}</p></div><span className="text-xs text-zinc-500">{group.sets.length} {group.sets.length === 1 ? "set" : "sets"}</span></button>
                 <div className="divide-y divide-zinc-800/70">
-                  <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-zinc-600"><span>Set</span><span>kg</span><span>Reps</span><span className="sr-only">Action</span></div>
+                  <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] items-center gap-2 px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-zinc-600"><span>Set</span><span>kg</span><span>Reps</span><span className="sr-only">Action</span></div>
                   {group.sets.map((set) => (
                     <div key={set.id} className="px-4 py-3">
-                      <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2">
+                      <div className="grid grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] items-center gap-2">
                         <span className="text-sm font-semibold text-zinc-500">{set.set_number}</span>
-                        <Input aria-label={`${group.exerciseName} set ${set.set_number} weight`} type="number" min={0} max={2000} step="0.5" defaultValue={set.weight} disabled={!isDraft} onBlur={(event) => void editSet(set, "weight", event.target.value)} className="h-9 border-zinc-800 bg-zinc-950" />
-                        <Input aria-label={`${group.exerciseName} set ${set.set_number} reps`} type="number" min={1} max={1000} step="1" defaultValue={set.reps} disabled={!isDraft} onBlur={(event) => void editSet(set, "reps", event.target.value)} className="h-9 border-zinc-800 bg-zinc-950" />
-                        {isDraft ? <button type="button" aria-label={`Delete ${group.exerciseName} set ${set.set_number}`} onClick={() => void removeSet(set.id)} className="rounded-md p-2 text-zinc-600 transition hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"><Trash2 className="h-4 w-4" /></button> : <Check className="h-4 w-4 text-zinc-700" aria-hidden="true" />}
+                        <Input aria-label={`${group.exerciseName} set ${set.set_number} weight`} type="number" min={0} max={2000} step="0.5" defaultValue={set.weight} disabled={!isDraft} onBlur={(event) => void editSet(set, "weight", event.target.value)} className="h-11 border-zinc-800 bg-zinc-950" />
+                        <Input aria-label={`${group.exerciseName} set ${set.set_number} reps`} type="number" min={1} max={1000} step="1" defaultValue={set.reps} disabled={!isDraft} onBlur={(event) => void editSet(set, "reps", event.target.value)} className="h-11 border-zinc-800 bg-zinc-950" />
+                        {isDraft ? <button type="button" aria-label={`Delete ${group.exerciseName} set ${set.set_number}`} onClick={() => { setDeleteError(null); setDeleteTarget(set); }} className="flex h-11 w-11 items-center justify-center rounded-md p-2 text-zinc-600 transition hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"><Trash2 className="h-4 w-4" /></button> : <Check className="h-4 w-4 text-zinc-700" aria-hidden="true" />}
                       </div>
                       {set.rpe !== null || set.rir !== null || set.notes ? <p className="mt-2 pl-10 text-xs text-zinc-600">{set.rpe !== null ? `RPE ${set.rpe}` : ""}{set.rpe !== null && set.rir !== null ? " · " : ""}{set.rir !== null ? `${set.rir} RIR` : ""}{(set.rpe !== null || set.rir !== null) && set.notes ? " · " : ""}{set.notes}</p> : null}
                     </div>
@@ -279,35 +313,36 @@ export default function WorkoutDetailPage() {
             ))}
 
             {isDraft ? (
-              <Card className="border-zinc-800 bg-zinc-900/50 p-4 sm:p-5">
+              <Card ref={observeLogger} id="set-logger" className="order-first scroll-mt-4 overflow-visible border-zinc-800 bg-zinc-900/50 p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="font-semibold text-zinc-100">Log a set</h2><p className="mt-1 text-xs text-zinc-500">Weight and reps stay ready for the next set.</p></div>{saveMessage ? <span className="inline-flex items-center gap-1 text-xs text-emerald-400"><Check className="h-3.5 w-3.5" /> {saveMessage}</span> : null}</div>
-                <form onSubmit={addSet} className="space-y-4">
+                <form id="log-set-form" onSubmit={addSet} className="space-y-4">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3"><label htmlFor="exercise-select" className="text-sm font-medium text-zinc-300">Exercise</label><button type="button" onClick={() => setShowCustomExercise((current) => !current)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">{showCustomExercise ? "Choose existing" : "Create custom"}</button></div>
+                    <div className="flex items-center justify-between gap-3"><span className="text-sm font-medium text-zinc-300">Exercise library</span><button type="button" onClick={() => setShowCustomExercise((current) => !current)} className="min-h-11 rounded-md px-2 text-sm font-medium text-emerald-400 hover:text-emerald-300">{showCustomExercise ? "Choose existing" : "Create custom"}</button></div>
                     {showCustomExercise ? (
                       <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
                         <Input aria-label="Custom exercise name" maxLength={140} placeholder="Exercise name" value={customName} onChange={(event) => setCustomName(event.target.value)} className="border-zinc-800 bg-zinc-900" />
-                        <select aria-label="Custom exercise muscle group" value={customMuscle} onChange={(event) => setCustomMuscle(event.target.value)} className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40">
+                        <select aria-label="Custom exercise muscle group" value={customMuscle} onChange={(event) => setCustomMuscle(event.target.value)} className="h-11 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40">
                           {Object.entries({ chest: "Chest", back: "Back", shoulders: "Shoulders", biceps: "Biceps", triceps: "Triceps", forearms: "Forearms", abs: "Core", quads: "Quads", hamstrings: "Hamstrings", glutes: "Glutes", calves: "Calves", full_body: "Full body" }).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
                         <Button type="button" variant="outline" className="w-full border-zinc-700" onClick={() => void createCustomExercise()} disabled={createExercise.isPending}>{createExercise.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add to library</Button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" /><Input type="search" aria-label="Search exercise library" placeholder="Search the exercise library" value={exerciseSearch} onChange={(event) => setExerciseSearch(event.target.value)} className="border-zinc-800 bg-zinc-950 pl-9" /></div>
-                        <select id="exercise-select" value={selectedExercise} onChange={(event) => selectExercise(event.target.value)} className="h-11 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"><option value="">Select an exercise</option>{exercises.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name} · {exercise.muscle_group.replace("_", " ")}</option>)}</select>
-                        {exercisesQuery.isFetching ? <p className="text-xs text-zinc-600">Searching…</p> : null}
-                      </div>
+                      <ExercisePicker value={Number(selectedExercise)} selectedName={selectedRecord?.name || selectedGroup?.exerciseName || ""} onChange={(exercise) => selectExercise(String(exercise.id), exercise)} />
                     )}
                   </div>
 
+                  {selectedExercise ? <div className="text-sm text-muted-foreground">
+                    {history.isLoading ? "Loading previous performance…" : history.isError ? <span>Previous performance could not be loaded. <button type="button" className="min-h-11 rounded-md px-2 text-primary" onClick={() => void history.refetch()}>Retry</button></span> : previousSession && previousSets ? <p>Previous performance · {formatWorkoutDate(previousSession.date)}: {previousSets.map((set) => `${set.weight} kg × ${set.reps}`).join(" · ")}</p> : <p>No completed session for this exercise yet.</p>}
+                  </div> : null}
+                  {fieldErrors.exercise ? <p role="alert" className="text-sm text-red-300">{fieldErrors.exercise}</p> : null}
+
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><label htmlFor="set-weight" className="text-sm font-medium text-zinc-300">Weight <span className="text-zinc-600">kg</span></label><Input id="set-weight" type="number" inputMode="decimal" min={0} max={2000} step="0.5" placeholder="80" value={weight} onChange={(event) => setWeight(event.target.value)} className="h-12 border-zinc-800 bg-zinc-950 text-lg font-semibold" /></div>
-                    <div className="space-y-1.5"><label htmlFor="set-reps" className="text-sm font-medium text-zinc-300">Reps</label><Input id="set-reps" type="number" inputMode="numeric" min={1} max={1000} step="1" placeholder="8" value={reps} onChange={(event) => setReps(event.target.value)} className="h-12 border-zinc-800 bg-zinc-950 text-lg font-semibold" /></div>
+                    <div className="space-y-1.5"><label htmlFor="set-weight" className="text-sm font-medium text-zinc-300">Weight <span className="text-zinc-600">kg</span></label><Input id="set-weight" required aria-invalid={Boolean(fieldErrors.weight)} aria-describedby={fieldErrors.weight ? "set-weight-error" : undefined} type="number" inputMode="decimal" min={0} max={2000} step="0.5" placeholder="80" value={weight} onChange={(event) => setWeight(event.target.value)} className="h-12 border-zinc-800 bg-zinc-950 text-lg font-semibold" />{fieldErrors.weight ? <p id="set-weight-error" role="alert" className="text-sm text-red-300">{fieldErrors.weight}</p> : null}</div>
+                    <div className="space-y-1.5"><label htmlFor="set-reps" className="text-sm font-medium text-zinc-300">Reps</label><Input id="set-reps" required aria-invalid={Boolean(fieldErrors.reps)} aria-describedby={fieldErrors.reps ? "set-reps-error" : undefined} type="number" inputMode="numeric" min={1} max={1000} step="1" placeholder="8" value={reps} onChange={(event) => setReps(event.target.value)} className="h-12 border-zinc-800 bg-zinc-950 text-lg font-semibold" />{fieldErrors.reps ? <p id="set-reps-error" role="alert" className="text-sm text-red-300">{fieldErrors.reps}</p> : null}</div>
                   </div>
 
                   <details className="group rounded-xl border border-zinc-800 bg-zinc-950/50">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm font-medium text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40">Advanced <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm font-medium text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40">Advanced <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
                     <div className="grid gap-3 border-t border-zinc-800 p-3 sm:grid-cols-2">
                       <div className="space-y-1.5"><label htmlFor="set-rpe" className="text-xs text-zinc-500">RPE · 1–10</label><Input id="set-rpe" type="number" min={1} max={10} step="0.5" placeholder="8.5" value={rpe} onChange={(event) => setRpe(event.target.value)} className="border-zinc-800 bg-zinc-900" /></div>
                       <div className="space-y-1.5"><label htmlFor="set-rir" className="text-xs text-zinc-500">Reps in reserve · 0–10</label><Input id="set-rir" type="number" min={0} max={10} step="1" placeholder="2" value={rir} onChange={(event) => setRir(event.target.value)} className="border-zinc-800 bg-zinc-900" /></div>
@@ -315,7 +350,10 @@ export default function WorkoutDetailPage() {
                     </div>
                   </details>
 
-                  <Button type="submit" disabled={createSet.isPending || !selectedExercise || weight === "" || reps === ""} className="h-11 w-full bg-emerald-400 font-semibold text-zinc-950 hover:bg-emerald-300">{createSet.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Plus className="h-4 w-4" /> Add set</>}</Button>
+                  <p id="log-set-help" className="text-xs text-muted-foreground">Choose an exercise and enter weight and reps. Use 0 kg for unweighted sets.</p>
+                  {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+                  {deletedSet ? <div role="status" className="flex items-center justify-between gap-3 text-sm"><span>Set deleted</span><Button type="button" variant="outline" onClick={() => void undoDelete()} disabled={createSet.isPending}>Undo deletion</Button></div> : null}
+                  <Button type="submit" disabled={createSet.isPending} aria-describedby="log-set-help" className="h-11 w-full bg-emerald-400 font-semibold text-zinc-950 hover:bg-emerald-300">{createSet.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Plus className="h-4 w-4" /> Add set</>}</Button>
                 </form>
               </Card>
             ) : <Card className="border-zinc-800 bg-zinc-900/30 p-5"><p className="font-medium text-zinc-200">Workout locked</p><p className="mt-1 text-sm text-zinc-500">Completed sets stay unchanged so progress data remains trustworthy.</p></Card>}
@@ -323,6 +361,9 @@ export default function WorkoutDetailPage() {
 
           <AnatomyMuscleMap muscleGroup={activeMuscle} exerciseName={activeExerciseName} />
         </div>
+
+        {isDraft && !loggerVisible ? <div className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 md:left-[17.5rem] md:right-6 lg:hidden"><Button type="button" className="w-full shadow-lg" onClick={() => { document.getElementById("set-logger")?.scrollIntoView({ block: "start" }); document.getElementById("set-weight")?.focus({ preventScroll: true }); }}>Log next set</Button></div> : null}
+        <ConfirmDeleteDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }} title={deleteTarget === "workout" ? isDraft ? "Discard this workout?" : "Delete this completed workout?" : "Delete this set?"} description={deleteTarget === "workout" ? "The workout and all its sets will be permanently deleted. This cannot be undone." : "The set will be removed. You can undo this while the workout remains in progress."} pending={deleteSet.isPending || deleteWorkout.isPending} error={deleteError} onConfirm={() => { if (deleteTarget === "workout") void removeWorkout(); else if (deleteTarget) void removeSet(deleteTarget); }} />
 
         <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
           <DialogContent className="max-w-md border-zinc-800 bg-zinc-950 text-zinc-100">

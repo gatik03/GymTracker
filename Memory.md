@@ -2,7 +2,37 @@
 
 ## Current focus
 
-Phase 2A: Three.js loaded-barbell release choreography and stacked-plate login experience. Phase 2B anatomy is explicitly not started.
+Whole-app usability follow-up and a populated demo account for visitors. Phase 2A login choreography remains intact; Phase 2B anatomy is not started.
+
+## Sample dashboard data (2026-10-26)
+
+- Added `python backend/manage.py seed_demo`, which creates a verified, non-staff `demo` account with public demonstration password `StackdDemo2026!`.
+- Creates 21 completed sample workouts over the preceding eight weeks, 189 sets across nine built-in exercises, 28 bodyweight measurements and three clearly labelled fictional journal entries. Dashboard/progress use their real persisted API records; regular accounts receive no sample data.
+- Reuses `seed_exercises` and `ensure_account_profile`; creation is transactional. Reruns leave existing data/passwords untouched, and unrelated username/email collisions are refused.
+- Initialized and seeded the local default SQLite database at `backend/db.sqlite3` (ignored by Git). No production database or remote deployment was changed.
+- Updated README access instructions and PRODUCT.md to record the owner's demo-data decision. Dates are fixed at first seed; no scheduled refresh or one-click guest login was added. Shared demo users can modify the sample records.
+- Verification: 46 backend tests including four seed-command tests; frontend lint and production build passed. Local deployment check still reports the same five development-setting warnings.
+- Signed in through the real login form as demo and inspected populated dashboard charts/history at 1440x900 and 390x844: no page exceptions or horizontal overflow. Captures: output/playwright/demo-dashboard-desktop.png and demo-dashboard-mobile.png. Local frontend/backend were left running on ports 3000/8000 for the owner to explore the demo.
+- Added the verified login and populated-demo dashboard screenshots to docs/screenshots/ and embedded them with repository-relative links and descriptive alt text in README.md for GitHub rendering.
+
+## UI critique follow-up (2026-10-26)
+
+- Confirmed the three original P0 fixes were already present: trailing-slash forwarding, public-route-safe session expiry handling, and the static dark root. Real-browser login and public-route checks passed.
+- Applied the documented STACKD brand, Inter UI typography, dark surface tokens, readable muted text and green product accent. The login retains its permitted localized amber treatment.
+- Dashboard now starts/resumes workouts directly, links recent sessions, removes the extra all-time PR panel, compacts empty chart areas and phone statistics, and distinguishes request errors from empty data with Retry actions.
+- Workout logging puts the form before saved sets. The phone shortcut appears only when the form is outside the viewport. Shared primary controls have approximately 44px touch targets; dialog width stays inside narrow screens.
+- Final independent browser confirmation caught and fixed two integration issues: controlled dialogs now restore opener focus on Escape, and the logger observes its actual mounted element after auth before showing the fixed phone shortcut. Final Escape, visibility, scroll-return and weight-focus checks pass; logger rendering was reconfirmed at all six sizes.
+- Added one searchable, keyboard-operable, paginated exercise picker shared by logger/progress; all 110 built-in exercises are reachable. Logger shows previous completed-session performance. Set mutations wait for cache refresh to avoid reusing stale set numbers.
+- Replaced native deletion prompts with project dialogs. The most recent draft-set deletion can be undone on the current page. Completed workouts remain read-only under Rules.md; no historical editing endpoint was introduced.
+- Added associated field-level API errors to workout creation, set weight/reps, registration/password reset and bodyweight forms. Required-field submission uses browser validation instead of unexplained disabled submit buttons.
+- Bodyweight rate API now returns null for total_change/rate_per_week until two recent measurements exist; TypeScript and profile rendering match. Real measured zero remains zero. Added two backend tests for missing/unchanged data.
+- Journal entry switching confirms unsaved changes, deletion errors are separate from save errors, and revision checks prevent delayed autosave responses from overwriting newer input.
+- Validation: 42 backend tests; two frontend API-error helper tests; ESLint; TypeScript; configured production build. Django deployment check reports the five expected local-development security warnings.
+- Production Chromium matrix: 12 routes/states at 360x800, 390x844, 430x932, 768x1024, 1440x900 and 1920x1080 (72 checks), no horizontal overflow, page exceptions or failed protected-route API responses. Screenshots/JSON are local artifacts in output/playwright/.
+- Real browser journeys verified set logging, last exercise page, keyboard selection, delete/cancel/undo, completion/read-only history, previous performance, journal draft recovery and delayed autosave, duplicate bodyweight/registration validation.
+- Impeccable Assessment A completed before detector evidence reached the parent. Detector ran once: 20 high-contrast dark-on-green false positives (8.34:1 or better for primary product buttons), one semantic login-notice border warning. Production CSP is preserved; overlay injection and transient Recharts mount warnings are recorded in the follow-up report.
+- QA used a temporary SQLite database under /tmp and disposable accounts; no demo records, test credentials or mock responses were added to the product. Anonymous rate allowance was increased only on the temporary QA process after the large screenshot matrix exhausted the default quota; source security settings are unchanged.
+- Deferred: multi-step/server-persisted undo, historical workout editing, demo access and a separate onboarding tour. OAuth provider round trips require configured external credentials and were not exercised.
 
 ## Application blockers fixed (2026-09-30)
 

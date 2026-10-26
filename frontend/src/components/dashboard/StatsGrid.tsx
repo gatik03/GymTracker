@@ -1,13 +1,17 @@
 "use client";
 
 import { StatCard } from "./StatCard";
+import { Button } from "@/components/ui/button";
 import { useMonthlyVolume, usePersonalRecords } from "@/hooks/useAnalytics";
 import { calculateWorkoutStreak, useWorkoutSessions } from "@/hooks/useWorkouts";
 
 export function StatsGrid() {
-  const { data: monthlyVolume, isLoading: isMonthlyLoading } = useMonthlyVolume();
-  const { data: prs, isLoading: isPrsLoading } = usePersonalRecords();
-  const { data: sessions, isLoading: isSessionsLoading } = useWorkoutSessions();
+  const monthlyQuery = useMonthlyVolume();
+  const recordsQuery = usePersonalRecords();
+  const sessionsQuery = useWorkoutSessions();
+  const { data: monthlyVolume, isLoading: isMonthlyLoading } = monthlyQuery;
+  const { data: prs, isLoading: isPrsLoading } = recordsQuery;
+  const { data: sessions, isLoading: isSessionsLoading } = sessionsQuery;
 
   const isLoading = isMonthlyLoading || isPrsLoading || isSessionsLoading;
 
@@ -28,7 +32,7 @@ export function StatsGrid() {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const count = sessions.filter(s => {
-      const d = new Date(s.date);
+      const d = new Date(`${s.date}T00:00:00`);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     }).length;
     return count.toString();
@@ -36,7 +40,7 @@ export function StatsGrid() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 h-28" />
         ))}
@@ -44,12 +48,16 @@ export function StatsGrid() {
     );
   }
 
+  if (monthlyQuery.isError || recordsQuery.isError || sessionsQuery.isError) {
+    return <div role="alert" className="space-y-3 rounded-lg border border-border p-4"><p className="text-sm text-red-300">Training statistics could not be loaded.</p><Button variant="outline" onClick={() => { void monthlyQuery.refetch(); void recordsQuery.refetch(); void sessionsQuery.refetch(); }}>Retry</Button></div>;
+  }
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard title="Monthly Volume" value={currentMonthVolume} />
-      <StatCard title="Workout Streak" value={streak} />
-      <StatCard title="Personal Records" value={prsCount} />
-      <StatCard title="Workouts This Month" value={workoutsThisMonth} />
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <StatCard title="Monthly volume" value={currentMonthVolume} />
+      <StatCard title="Workout streak" value={streak} />
+      <StatCard title="Exercises with records" value={prsCount} />
+      <StatCard title="Workouts this month" value={workoutsThisMonth} />
     </div>
   );
 }

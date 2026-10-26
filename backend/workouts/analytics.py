@@ -275,8 +275,8 @@ class BodyWeightRateView(APIView):
             return Response({
                 "current_weight": latest.weight if latest else None,
                 "starting_weight": entries.first().weight if entries.first() else None,
-                "total_change": 0.0,
-                "rate_per_week": 0.0,
+                "total_change": None,
+                "rate_per_week": None,
                 "message": "At least 2 entries in the last 30 days are required to calculate rate of change."
             })
 

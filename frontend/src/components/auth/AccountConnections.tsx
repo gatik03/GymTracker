@@ -69,7 +69,7 @@ export function AccountConnections() {
             Connected accounts
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Link a provider only after signing in here. GymTracker never stores provider access tokens.
+            Link a provider only after signing in here. STACKD never stores provider access tokens.
           </p>
         </div>
         <span className="text-xs text-zinc-500">

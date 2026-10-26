@@ -59,8 +59,8 @@ export function useBodyWeightTrend() {
 export interface BodyWeightRate {
   current_weight: number | null;
   starting_weight: number | null;
-  total_change: number;
-  rate_per_week: number;
+  total_change: number | null;
+  rate_per_week: number | null;
   message: string;
 }
 

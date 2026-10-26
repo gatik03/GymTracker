@@ -23,7 +23,7 @@ export function VolumeChart() {
         <p className="mt-1 text-sm text-zinc-500">Volume on the days you actually trained</p>
       </div>
 
-      <div className="h-72 sm:h-80">
+      <div className={chartData.length || dailyVolume.isLoading ? "h-72 sm:h-80" : "h-32"}>
         {dailyVolume.isLoading ? (
           <div className="h-full animate-pulse rounded-xl bg-zinc-950/60" aria-label="Loading monthly volume" />
         ) : dailyVolume.isError ? (

@@ -39,6 +39,17 @@ const isApiError = (error: unknown): error is AxiosError<ApiErrorPayload> => (
   axios.isAxiosError(error)
 );
 
+export function getApiFieldErrors(error: unknown): Record<string, string> {
+  if (!isApiError(error) || !isRecord(error.response?.data)) return {};
+  const fields: Record<string, string> = {};
+  for (const [field, value] of Object.entries(error.response.data)) {
+    if (field === "detail" || field === "non_field_errors") continue;
+    const message = firstString(value);
+    if (message) fields[field] = message;
+  }
+  return fields;
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (isApiError(error)) {
     const apiMessage = messageFromPayload(error.response?.data);

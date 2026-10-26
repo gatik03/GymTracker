@@ -28,9 +28,9 @@ export function AppLayout({
             onMenuClick={() => setMobileOpen(true)}
           />
 
-          <main className="min-w-0 flex-1 p-4 sm:p-6">
+          <div className="min-w-0 flex-1 p-4 sm:p-6">
             {children}
-          </main>
+          </div>
         </div>
       </div>
     </ProtectedRoute>

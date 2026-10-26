@@ -58,7 +58,7 @@ export function LoginCard({ destination, visible, morphing, ready, error, notice
               {/* After the input in the DOM so Tab goes field to field; placed on the label row visually. */}
               <Link href="/forgot-password" tabIndex={ready ? 0 : -1} className="login-forgot">Forgot password?</Link>
             </div>
-            <button type="submit" disabled={!ready || isLoading || !identifier.trim() || !password} className="login-submit">{isLoading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Logging in</> : "Log in"}</button>
+            <button type="submit" disabled={!ready || isLoading} className="login-submit">{isLoading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Logging in</> : "Log in"}</button>
           </fieldset>
         </form>
 

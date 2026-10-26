@@ -50,12 +50,14 @@ export default function WorkoutsPage() {
           </div>
           <Button
             onClick={() => setNewWorkoutOpen(true)}
-            disabled={Boolean(activeWorkout.data) || activeWorkout.isLoading}
+            disabled={Boolean(activeWorkout.data) || activeWorkout.isLoading || activeWorkout.isError}
+            aria-describedby="new-workout-help"
             className="bg-emerald-500 font-semibold text-zinc-950 hover:bg-emerald-400"
           >
             <Plus className="h-4 w-4" /> New workout
           </Button>
         </header>
+        <p id="new-workout-help" className="text-sm text-muted-foreground">{activeWorkout.isLoading ? "Checking for a saved workout before starting another." : activeWorkout.isError ? "Retry the active workout check before starting a session." : activeWorkout.data ? "Resume or discard your active workout before starting another." : "Start a session, log your sets, then finish it to add it to your history."}</p>
 
         {error ? (
           <div role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
@@ -85,8 +87,8 @@ export default function WorkoutsPage() {
                 </div>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-50">{activeWorkout.data.title}</h2>
                 <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-zinc-400">
-                  <span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4" /> {activeWorkout.data.exercise_count} exercises</span>
-                  <span>{activeWorkout.data.total_sets} sets</span>
+                  <span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4" /> {activeWorkout.data.exercise_count} {activeWorkout.data.exercise_count === 1 ? "exercise" : "exercises"}</span>
+                  <span>{activeWorkout.data.total_sets} {activeWorkout.data.total_sets === 1 ? "set" : "sets"}</span>
                   <span>{activeWorkout.data.total_volume.toLocaleString()} kg</span>
                   <span className="inline-flex items-center gap-1.5"><Clock3 className="h-4 w-4" /> {activeWorkout.data.duration_minutes} min</span>
                 </div>

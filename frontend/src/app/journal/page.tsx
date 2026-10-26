@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, Plus, Save, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteDialog } from "@/components/ui/ConfirmDeleteDialog";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   JournalDraft,
-  JournalEntry,
   useCreateJournalEntry,
   useDeleteJournalEntry,
   useJournalEntries,
@@ -26,29 +27,40 @@ export default function JournalPage() {
   const updateEntry = useUpdateJournalEntry();
   const deleteEntry = useDeleteJournalEntry();
   const [draft, setDraft] = useState<EditorDraft>(emptyDraft);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [pendingDraft, setPendingDraft] = useState<EditorDraft | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const revision = useRef(0);
+  const isSaving = createEntry.isPending || updateEntry.isPending;
 
   useEffect(() => {
-    if (draft.id === null || saveState !== "dirty" || !draft.content.trim()) return;
+    if (draft.id === null || saveState !== "dirty" || !draft.content.trim() || isSaving || pendingDraft || deleteOpen) return;
     const saveTimer = window.setTimeout(() => {
+      const savedRevision = revision.current;
       setSaveState("saving");
       void updateEntry.mutateAsync({
         id: draft.id as number,
         draft: { date: draft.date, title: draft.title, content: draft.content },
       }).then((saved) => {
+        if (revision.current !== savedRevision) { setSaveState("dirty"); return; }
         setDraft((current) => current.id === saved.id ? { ...saved, id: saved.id } : current);
         setSaveState("saved");
       }).catch(() => setSaveState("error"));
     }, 900);
     return () => window.clearTimeout(saveTimer);
-  }, [draft, saveState, updateEntry]);
+  }, [draft, saveState, updateEntry, isSaving, pendingDraft, deleteOpen]);
 
-  const editEntry = (entry: JournalEntry) => {
-    setDraft({ id: entry.id, date: entry.date, title: entry.title, content: entry.content });
-    setSaveState("saved");
+  const changeDraft = (next: EditorDraft) => {
+    if (isSaving) return;
+    if (saveState === "dirty" || saveState === "error") { setPendingDraft(next); return; }
+    revision.current += 1;
+    setDraft(next);
+    setSaveState(next.id === null ? "idle" : "saved");
   };
 
   const updateDraft = (field: keyof JournalDraft, value: string) => {
+    revision.current += 1;
     setDraft((current) => ({ ...current, [field]: value }));
     setSaveState("dirty");
   };
@@ -58,27 +70,35 @@ export default function JournalPage() {
       setSaveState("error");
       return;
     }
+    const savedRevision = revision.current;
     setSaveState("saving");
     try {
       const payload = { date: draft.date, title: draft.title, content: draft.content };
       const saved = draft.id === null
         ? await createEntry.mutateAsync(payload)
         : await updateEntry.mutateAsync({ id: draft.id, draft: payload });
-      setDraft({ id: saved.id, date: saved.date, title: saved.title, content: saved.content });
-      setSaveState("saved");
+      if (revision.current === savedRevision) {
+        setDraft({ id: saved.id, date: saved.date, title: saved.title, content: saved.content });
+        setSaveState("saved");
+      } else {
+        setDraft((current) => ({ ...current, id: saved.id }));
+        setSaveState("dirty");
+      }
     } catch {
       setSaveState("error");
     }
   };
 
   const removeEntry = async () => {
-    if (draft.id === null || !window.confirm("Delete this private journal entry?")) return;
+    if (draft.id === null) return;
+    setDeleteError("");
     try {
       await deleteEntry.mutateAsync(draft.id);
+      setDeleteOpen(false);
       setDraft(emptyDraft());
       setSaveState("idle");
     } catch {
-      setSaveState("error");
+      setDeleteError("The entry could not be deleted. Please try again.");
     }
   };
 
@@ -93,7 +113,8 @@ export default function JournalPage() {
           </div>
           <Button
             type="button"
-            onClick={() => { setDraft(emptyDraft()); setSaveState("idle"); }}
+            onClick={() => changeDraft(emptyDraft())}
+            disabled={isSaving}
             className="gap-2 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
           >
             <Plus className="h-4 w-4" /> New entry
@@ -115,7 +136,8 @@ export default function JournalPage() {
               <button
                 key={entry.id}
                 type="button"
-                onClick={() => editEntry(entry)}
+                onClick={() => changeDraft(entry)}
+                disabled={isSaving}
                 className={`w-full rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${draft.id === entry.id ? "border-emerald-500/60 bg-emerald-500/5" : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"}`}
               >
                 <time className="text-xs text-zinc-500" dateTime={entry.date}>{new Date(`${entry.date}T00:00:00`).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</time>
@@ -144,13 +166,23 @@ export default function JournalPage() {
                   {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved just now" : saveState === "error" ? "Could not save. Check the entry and try again." : draft.id ? "Autosave is on" : "Save once to enable autosave"}
                 </p>
                 <div className="flex gap-2">
-                  {draft.id !== null && <Button type="button" variant="destructive" onClick={() => void removeEntry()} disabled={deleteEntry.isPending} aria-label="Delete journal entry"><Trash2 className="h-4 w-4" /></Button>}
-                  <Button type="button" onClick={() => void saveDraft()} disabled={saveState === "saving" || !draft.content.trim()} className="gap-2 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"><Save className="h-4 w-4" /> Save</Button>
+                  {draft.id !== null && <Button type="button" variant="destructive" onClick={() => { setDeleteError(""); setDeleteOpen(true); }} disabled={deleteEntry.isPending || isSaving} aria-label="Delete journal entry"><Trash2 className="h-4 w-4" /></Button>}
+                  <Button type="button" onClick={() => void saveDraft()} disabled={isSaving || !draft.content.trim()} className="gap-2 bg-emerald-500 text-zinc-950 hover:bg-emerald-400"><Save className="h-4 w-4" /> Save</Button>
                 </div>
               </div>
             </div>
           </Card>
         </div>
+        <ConfirmDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete this journal entry?" description="Your private entry will be permanently removed. This cannot be undone." pending={deleteEntry.isPending} error={deleteError} onConfirm={() => void removeEntry()} />
+        <Dialog open={pendingDraft !== null} onOpenChange={(open) => { if (!open) setPendingDraft(null); }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Discard unsaved changes?</DialogTitle><DialogDescription>These changes have not been saved. Keep editing to save them, or discard them to continue.</DialogDescription></DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPendingDraft(null)}>Keep editing</Button>
+              <Button variant="destructive" onClick={() => { if (pendingDraft) { revision.current += 1; setDraft(pendingDraft); setSaveState(pendingDraft.id === null ? "idle" : "saved"); setPendingDraft(null); } }}>Discard changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

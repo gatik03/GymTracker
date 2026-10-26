@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useWorkoutSessions } from "@/hooks/useWorkouts";
 
 export function ActivityFeed() {
-  const { data: sessions, isLoading } = useWorkoutSessions();
+  const { data: sessions, isLoading, isError, refetch } = useWorkoutSessions();
 
   const candidates = (sessions ?? [])
     .flatMap((session) =>
@@ -31,7 +32,7 @@ export function ActivityFeed() {
     .slice(0, 2);
 
   return (
-    <Card className="p-6 border-zinc-800 bg-zinc-900/50 backdrop-blur-xl">
+    <Card className="p-6 border-zinc-800 bg-zinc-900/50">
       <div className="mb-4">
         <h2 className="text-xl font-bold text-white">Heavy Hits</h2>
         <p className="text-sm text-zinc-400">
@@ -44,6 +45,8 @@ export function ActivityFeed() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
           <p className="text-xs text-zinc-500">Loading performances…</p>
         </div>
+      ) : isError ? (
+        <div role="alert" className="space-y-3 text-sm text-red-300"><p>Performances could not be loaded.</p><Button variant="outline" onClick={() => void refetch()}>Retry</Button></div>
       ) : heavyHits.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-800 py-8 text-center text-sm text-zinc-500">
           Log sets of eight or more reps to see your heavy hits.

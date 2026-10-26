@@ -79,7 +79,7 @@ export function useCreateExerciseSet() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      return queryClient.invalidateQueries({ queryKey: ["workouts"] });
     },
   });
 }
@@ -106,7 +106,7 @@ export function useUpdateExerciseSet() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      return queryClient.invalidateQueries({ queryKey: ["workouts"] });
     },
   });
 }
@@ -120,7 +120,7 @@ export function useDeleteExerciseSet() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      return queryClient.invalidateQueries({ queryKey: ["workouts"] });
     },
   });
 }

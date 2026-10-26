@@ -23,7 +23,7 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
       <SheetContent side="left" className="flex flex-col justify-between border-zinc-800 bg-zinc-950 text-zinc-100">
         <div>
           <SheetTitle className="mb-8 mt-4 text-left text-xl font-bold tracking-tight text-zinc-50">
-            <Link href="/" onClick={() => onOpenChange(false)}>Gym<span className="text-emerald-400">Tracker</span></Link>
+            <Link href="/" onClick={() => onOpenChange(false)}>STACKD<span className="text-emerald-400">.</span></Link>
           </SheetTitle>
           <nav aria-label="Mobile primary navigation" className="flex flex-col gap-1">
             {navigationItems.map((item) => {
